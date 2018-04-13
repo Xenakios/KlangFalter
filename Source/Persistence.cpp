@@ -25,7 +25,7 @@
 #include <map>
 
 
-namespace internal
+namespace internal_
 {
   
   struct IRAgentConfiguration
@@ -76,11 +76,11 @@ XmlElement* SaveState(const File& irDirectory, Processor& processor)
   convolutionElement->setAttribute("dryOn", processor.getParameter(Parameters::DryOn));
   convolutionElement->setAttribute("dryDecibels", processor.getParameter(Parameters::DryDecibels));
   convolutionElement->setAttribute("autoGainOn", processor.getParameter(Parameters::AutoGainOn));
-  convolutionElement->setAttribute("eqLowType", internal::EqType2String(Parameters::EqType(processor.getParameter(Parameters::EqLowType))));
+  convolutionElement->setAttribute("eqLowType", internal_::EqType2String(Parameters::EqType(processor.getParameter(Parameters::EqLowType))));
   convolutionElement->setAttribute("eqLowCutFreq", processor.getParameter(Parameters::EqLowCutFreq));
   convolutionElement->setAttribute("eqLowShelfFreq", processor.getParameter(Parameters::EqLowShelfFreq));
   convolutionElement->setAttribute("eqLowShelfDecibels", processor.getParameter(Parameters::EqLowShelfDecibels));
-  convolutionElement->setAttribute("eqHighType", internal::EqType2String(Parameters::EqType(processor.getParameter(Parameters::EqHighType))));
+  convolutionElement->setAttribute("eqHighType", internal_::EqType2String(Parameters::EqType(processor.getParameter(Parameters::EqHighType))));
   convolutionElement->setAttribute("eqHighCutFreq", processor.getParameter(Parameters::EqHighCutFreq));
   convolutionElement->setAttribute("eqHighShelfFreq", processor.getParameter(Parameters::EqHighShelfFreq));
   convolutionElement->setAttribute("eqHighShelfDecibels", processor.getParameter(Parameters::EqHighShelfDecibels));
@@ -147,18 +147,18 @@ bool LoadState(const File& irDirectory, XmlElement& element, Processor& processo
   double stereoWidth = element.getDoubleAttribute("stereoWidth", Parameters::StereoWidth.getDefaultValue());
   bool reverse = element.getBoolAttribute("reverse", false);
   
-  Parameters::EqType eqLoType = internal::String2EqType(element.getStringAttribute("eqLowType", juce::String()));
+  Parameters::EqType eqLoType = internal_::String2EqType(element.getStringAttribute("eqLowType", juce::String()));
   double eqLoCutFreq = element.getDoubleAttribute("eqLowCutFreq", Parameters::EqLowCutFreq.getDefaultValue());
   double eqLoShelfFreq = element.getDoubleAttribute("eqLowShelfFreq", Parameters::EqLowShelfFreq.getDefaultValue());
   double eqLoShelfDecibels = element.getDoubleAttribute("eqLowShelfDecibels", Parameters::EqLowShelfDecibels.getDefaultValue());
 
-  Parameters::EqType eqHiType = internal::String2EqType(element.getStringAttribute("eqHighType", juce::String()));
+  Parameters::EqType eqHiType = internal_::String2EqType(element.getStringAttribute("eqHighType", juce::String()));
   double eqHiCutFreq = element.getDoubleAttribute("eqHighCutFreq", Parameters::EqHighCutFreq.getDefaultValue());
   double eqHiShelfFreq = element.getDoubleAttribute("eqHighShelfFreq", Parameters::EqHighShelfFreq.getDefaultValue());
   double eqHiShelfDecibels = element.getDoubleAttribute("eqHighShelfDecibels", Parameters::EqHighShelfDecibels.getDefaultValue());
   
   // IRs
-  std::vector<internal::IRAgentConfiguration> irConfigurations;
+  std::vector<internal_::IRAgentConfiguration> irConfigurations;
   forEachXmlChildElementWithTagName (element, irElement, "ImpulseResponse")
   {
     const int inputChannel = irElement->getIntAttribute("input", -1);
@@ -173,7 +173,7 @@ bool LoadState(const File& irDirectory, XmlElement& element, Processor& processo
     {
       return false;
     }
-    internal::IRAgentConfiguration configuration;
+    internal_::IRAgentConfiguration configuration;
     configuration._irAgent = irAgent;
     configuration._file = irElement->getStringAttribute("file", String::empty);
     configuration._fileChannel = irElement->getIntAttribute("fileChannel", -1);

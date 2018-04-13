@@ -1,34 +1,27 @@
 /*
   ==============================================================================
 
-   This file is part of the juce_core module of the JUCE library.
-   Copyright (c) 2015 - ROLI Ltd.
+   This file is part of the JUCE library.
+   Copyright (c) 2017 - ROLI Ltd.
 
-   Permission to use, copy, modify, and/or distribute this software for any purpose with
-   or without fee is hereby granted, provided that the above copyright notice and this
-   permission notice appear in all copies.
+   JUCE is an open source library subject to commercial or open-source
+   licensing.
 
-   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD
-   TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN
-   NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
-   DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-   IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-   CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+   The code included in this file is provided under the terms of the ISC license
+   http://www.isc.org/downloads/software-support-policy/isc-license. Permission
+   To use, copy, modify, and/or distribute this software for any purpose with or
+   without fee is hereby granted provided that the above copyright notice and
+   this permission notice appear in all copies.
 
-   ------------------------------------------------------------------------------
-
-   NOTE! This permissive ISC license applies ONLY to files within the juce_core module!
-   All other JUCE modules are covered by a dual GPL/commercial license, so if you are
-   using any other modules, be sure to check that you also comply with their license.
-
-   For more details, visit www.juce.com
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
 
-#ifndef JUCE_REFERENCECOUNTEDOBJECT_H_INCLUDED
-#define JUCE_REFERENCECOUNTEDOBJECT_H_INCLUDED
-
+namespace juce
+{
 
 //==============================================================================
 /**
@@ -61,6 +54,8 @@
     version, use SingleThreadedReferenceCountedObject instead.
 
     @see ReferenceCountedObjectPtr, ReferenceCountedArray, SingleThreadedReferenceCountedObject
+
+    @tags{Core}
 */
 class JUCE_API  ReferenceCountedObject
 {
@@ -106,6 +101,15 @@ protected:
     /** Creates the reference-counted object (with an initial ref count of zero). */
     ReferenceCountedObject() {}
 
+    /** Copying from another object does not affect this one's reference-count. */
+    ReferenceCountedObject (const ReferenceCountedObject&) noexcept {}
+    /** Copying from another object does not affect this one's reference-count. */
+    ReferenceCountedObject (ReferenceCountedObject&&) noexcept {}
+    /** Copying from another object does not affect this one's reference-count. */
+    ReferenceCountedObject& operator= (const ReferenceCountedObject&) noexcept  { return *this; }
+    /** Copying from another object does not affect this one's reference-count. */
+    ReferenceCountedObject& operator= (ReferenceCountedObject&&) noexcept       { return *this; }
+
     /** Destructor. */
     virtual ~ReferenceCountedObject()
     {
@@ -123,10 +127,8 @@ protected:
 
 private:
     //==============================================================================
-    Atomic <int> refCount;
-
+    Atomic<int> refCount { 0 };
     friend struct ContainerDeletePolicy<ReferenceCountedObject>;
-    JUCE_DECLARE_NON_COPYABLE (ReferenceCountedObject)
 };
 
 
@@ -140,6 +142,8 @@ private:
     For more details on how to use it, see the ReferenceCountedObject class notes.
 
     @see ReferenceCountedObject, ReferenceCountedObjectPtr, ReferenceCountedArray
+
+    @tags{Core}
 */
 class JUCE_API  SingleThreadedReferenceCountedObject
 {
@@ -183,7 +187,16 @@ public:
 protected:
     //==============================================================================
     /** Creates the reference-counted object (with an initial ref count of zero). */
-    SingleThreadedReferenceCountedObject() : refCount (0)  {}
+    SingleThreadedReferenceCountedObject() {}
+
+    /** Copying from another object does not affect this one's reference-count. */
+    SingleThreadedReferenceCountedObject (const SingleThreadedReferenceCountedObject&) {}
+    /** Copying from another object does not affect this one's reference-count. */
+    SingleThreadedReferenceCountedObject (SingleThreadedReferenceCountedObject&&) {}
+    /** Copying from another object does not affect this one's reference-count. */
+    SingleThreadedReferenceCountedObject& operator= (const SingleThreadedReferenceCountedObject&) { return *this; }
+    /** Copying from another object does not affect this one's reference-count. */
+    SingleThreadedReferenceCountedObject& operator= (SingleThreadedReferenceCountedObject&&) { return *this; }
 
     /** Destructor. */
     virtual ~SingleThreadedReferenceCountedObject()
@@ -194,10 +207,8 @@ protected:
 
 private:
     //==============================================================================
-    int refCount;
-
+    int refCount = 0;
     friend struct ContainerDeletePolicy<ReferenceCountedObject>;
-    JUCE_DECLARE_NON_COPYABLE (SingleThreadedReferenceCountedObject)
 };
 
 
@@ -219,9 +230,12 @@ private:
     {
         typedef ReferenceCountedObjectPtr<MyClass> Ptr;
         ...
+    }
     @endcode
 
     @see ReferenceCountedObject, ReferenceCountedObjectArray
+
+    @tags{Core}
 */
 template <class ReferenceCountedObjectClass>
 class ReferenceCountedObjectPtr
@@ -232,10 +246,10 @@ public:
 
     //==============================================================================
     /** Creates a pointer to a null object. */
-    ReferenceCountedObjectPtr() noexcept
-        : referencedObject (nullptr)
-    {
-    }
+    ReferenceCountedObjectPtr() noexcept {}
+
+    /** Creates a pointer to a null object. */
+    ReferenceCountedObjectPtr (decltype (nullptr)) noexcept {}
 
     /** Creates a pointer to an object.
         This will increment the object's reference-count.
@@ -245,14 +259,6 @@ public:
     {
         incIfNotNull (refCountedObject);
     }
-
-   #if JUCE_COMPILER_SUPPORTS_NULLPTR
-    /** Creates a pointer to a null object. */
-    ReferenceCountedObjectPtr (decltype (nullptr)) noexcept
-        : referencedObject (nullptr)
-    {
-    }
-   #endif
 
     /** Copies another pointer.
         This will increment the object's reference-count.
@@ -302,7 +308,7 @@ public:
         if (referencedObject != newObject)
         {
             incIfNotNull (newObject);
-            ReferencedType* const oldObject = referencedObject;
+            auto* oldObject = referencedObject;
             referencedObject = newObject;
             decIfNotNull (oldObject);
         }
@@ -310,7 +316,6 @@ public:
         return *this;
     }
 
-   #if JUCE_COMPILER_SUPPORTS_MOVE_SEMANTICS
     /** Takes-over the object from another pointer. */
     ReferenceCountedObjectPtr (ReferenceCountedObjectPtr&& other) noexcept
         : referencedObject (other.referencedObject)
@@ -324,7 +329,6 @@ public:
         std::swap (referencedObject, other.referencedObject);
         return *this;
     }
-   #endif
 
     /** Destructor.
         This will decrement the object's reference-count, which will cause the
@@ -360,7 +364,7 @@ public:
 
 private:
     //==============================================================================
-    ReferencedType* referencedObject;
+    ReferencedType* referencedObject = nullptr;
 
     static void incIfNotNull (ReferencedType* o) noexcept
     {
@@ -419,5 +423,4 @@ bool operator!= (ReferenceCountedObjectClass* object1, const ReferenceCountedObj
     return object1 != object2.get();
 }
 
-
-#endif   // JUCE_REFERENCECOUNTEDOBJECT_H_INCLUDED
+} // namespace juce

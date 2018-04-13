@@ -42,8 +42,8 @@
 */
 class IRComponent  : public Component,
                      public ChangeNotifier::Listener,
-                     public ButtonListener,
-                     public ComboBoxListener
+					 public Button::Listener,
+					 public ComboBox::Listener
 {
 public:
     //==============================================================================

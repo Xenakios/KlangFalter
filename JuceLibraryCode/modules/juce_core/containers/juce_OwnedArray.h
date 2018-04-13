@@ -1,34 +1,27 @@
 /*
   ==============================================================================
 
-   This file is part of the juce_core module of the JUCE library.
-   Copyright (c) 2015 - ROLI Ltd.
+   This file is part of the JUCE library.
+   Copyright (c) 2017 - ROLI Ltd.
 
-   Permission to use, copy, modify, and/or distribute this software for any purpose with
-   or without fee is hereby granted, provided that the above copyright notice and this
-   permission notice appear in all copies.
+   JUCE is an open source library subject to commercial or open-source
+   licensing.
 
-   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD
-   TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN
-   NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
-   DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-   IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-   CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+   The code included in this file is provided under the terms of the ISC license
+   http://www.isc.org/downloads/software-support-policy/isc-license. Permission
+   To use, copy, modify, and/or distribute this software for any purpose with or
+   without fee is hereby granted provided that the above copyright notice and
+   this permission notice appear in all copies.
 
-   ------------------------------------------------------------------------------
-
-   NOTE! This permissive ISC license applies ONLY to files within the juce_core module!
-   All other JUCE modules are covered by a dual GPL/commercial license, so if you are
-   using any other modules, be sure to check that you also comply with their license.
-
-   For more details, visit www.juce.com
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
 
-#ifndef JUCE_OWNEDARRAY_H_INCLUDED
-#define JUCE_OWNEDARRAY_H_INCLUDED
-
+namespace juce
+{
 
 //==============================================================================
 /** An array designed for holding objects.
@@ -48,6 +41,8 @@
     TypeOfCriticalSectionToUse parameter, instead of the default DummyCriticalSection.
 
     @see Array, ReferenceCountedArray, StringArray, CriticalSection
+
+    @tags{Core}
 */
 template <class ObjectClass,
           class TypeOfCriticalSectionToUse = DummyCriticalSection>
@@ -58,7 +53,6 @@ public:
     //==============================================================================
     /** Creates an empty array. */
     OwnedArray() noexcept
-        : numUsed (0)
     {
     }
 
@@ -72,7 +66,7 @@ public:
         deleteAllObjects();
     }
 
-   #if JUCE_COMPILER_SUPPORTS_MOVE_SEMANTICS
+    /** Move constructor */
     OwnedArray (OwnedArray&& other) noexcept
         : data (static_cast<ArrayAllocationBase <ObjectClass*, TypeOfCriticalSectionToUse>&&> (other.data)),
           numUsed (other.numUsed)
@@ -80,6 +74,14 @@ public:
         other.numUsed = 0;
     }
 
+   #if JUCE_COMPILER_SUPPORTS_INITIALIZER_LISTS
+    OwnedArray (const std::initializer_list<ObjectClass*>& items)
+    {
+        addArray (items);
+    }
+   #endif
+
+    /** Move assignment operator */
     OwnedArray& operator= (OwnedArray&& other) noexcept
     {
         const ScopedLockType lock (getLock());
@@ -90,7 +92,6 @@ public:
         other.numUsed = 0;
         return *this;
     }
-   #endif
 
     //==============================================================================
     /** Clears the array, optionally deleting the objects inside it first. */
@@ -146,7 +147,7 @@ public:
         if (isPositiveAndBelow (index, numUsed))
         {
             jassert (data.elements != nullptr);
-            return data.elements [index];
+            return data.elements[index];
         }
 
         return nullptr;
@@ -161,7 +162,7 @@ public:
     {
         const ScopedLockType lock (getLock());
         jassert (isPositiveAndBelow (index, numUsed) && data.elements != nullptr);
-        return data.elements [index];
+        return data.elements[index];
     }
 
     /** Returns a pointer to the first object in the array.
@@ -176,7 +177,7 @@ public:
         if (numUsed > 0)
         {
             jassert (data.elements != nullptr);
-            return data.elements [0];
+            return data.elements[0];
         }
 
         return nullptr;
@@ -194,7 +195,7 @@ public:
         if (numUsed > 0)
         {
             jassert (data.elements != nullptr);
-            return data.elements [numUsed - 1];
+            return data.elements[numUsed - 1];
         }
 
         return nullptr;
@@ -240,12 +241,12 @@ public:
     int indexOf (const ObjectClass* objectToLookFor) const noexcept
     {
         const ScopedLockType lock (getLock());
-        ObjectClass* const* e = data.elements.getData();
-        ObjectClass* const* const end_ = e + numUsed;
+        auto** e = data.elements.get();
+        auto** end_ = e + numUsed;
 
         for (; e != end_; ++e)
             if (objectToLookFor == *e)
-                return static_cast<int> (e - data.elements.getData());
+                return static_cast<int> (e - data.elements.get());
 
         return -1;
     }
@@ -258,8 +259,8 @@ public:
     bool contains (const ObjectClass* objectToLookFor) const noexcept
     {
         const ScopedLockType lock (getLock());
-        ObjectClass* const* e = data.elements.getData();
-        ObjectClass* const* const end_ = e + numUsed;
+        auto** e = data.elements.get();
+        auto** end_ = e + numUsed;
 
         for (; e != end_; ++e)
             if (objectToLookFor == *e)
@@ -286,7 +287,7 @@ public:
         const ScopedLockType lock (getLock());
         data.ensureAllocatedSize (numUsed + 1);
         jassert (data.elements != nullptr);
-        data.elements [numUsed++] = newObject;
+        data.elements[numUsed++] = newObject;
         return newObject;
     }
 
@@ -321,8 +322,8 @@ public:
         data.ensureAllocatedSize (numUsed + 1);
         jassert (data.elements != nullptr);
 
-        ObjectClass** const e = data.elements + indexToInsertAt;
-        const int numToMove = numUsed - indexToInsertAt;
+        auto** e = data.elements + indexToInsertAt;
+        auto numToMove = numUsed - indexToInsertAt;
 
         if (numToMove > 0)
             memmove (e + 1, e, sizeof (ObjectClass*) * (size_t) numToMove);
@@ -352,12 +353,12 @@ public:
         {
             const ScopedLockType lock (getLock());
             data.ensureAllocatedSize (numUsed + numberOfElements);
-            ObjectClass** insertPos = data.elements;
+            auto* insertPos = data.elements.get();
 
             if (isPositiveAndBelow (indexToInsertAt, numUsed))
             {
                 insertPos += indexToInsertAt;
-                const size_t numberToMove = (size_t) (numUsed - indexToInsertAt);
+                auto numberToMove = (size_t) (numUsed - indexToInsertAt);
                 memmove (insertPos + numberOfElements, insertPos, numberToMove * sizeof (ObjectClass*));
             }
             else
@@ -417,18 +418,18 @@ public:
                 {
                     if (deleteOldElement)
                     {
-                        toDelete = data.elements [indexToChange];
+                        toDelete.reset (data.elements[indexToChange]);
 
-                        if (toDelete == newObject)
+                        if (toDelete.get() == newObject)
                             toDelete.release();
                     }
 
-                    data.elements [indexToChange] = newObject;
+                    data.elements[indexToChange] = newObject;
                 }
                 else
                 {
                     data.ensureAllocatedSize (numUsed + 1);
-                    data.elements [numUsed++] = newObject;
+                    data.elements[numUsed++] = newObject;
                 }
             }
         }
@@ -472,10 +473,25 @@ public:
 
         while (--numElementsToAdd >= 0)
         {
-            data.elements [numUsed] = arrayToAddFrom.getUnchecked (startIndex++);
+            data.elements[numUsed] = arrayToAddFrom.getUnchecked (startIndex++);
             ++numUsed;
         }
     }
+
+   #if JUCE_COMPILER_SUPPORTS_INITIALIZER_LISTS
+    template <typename OtherArrayType>
+    void addArray (const std::initializer_list<OtherArrayType>& items)
+    {
+        const ScopedLockType lock (getLock());
+        data.ensureAllocatedSize (numUsed + (int) items.size());
+
+        for (auto* item : items)
+        {
+            data.elements[numUsed] = item;
+            ++numUsed;
+        }
+    }
+   #endif
 
     /** Adds copies of the elements in another array to the end of this array.
 
@@ -512,7 +528,7 @@ public:
         jassert (numElementsToAdd <= 0 || data.elements != nullptr);
 
         while (--numElementsToAdd >= 0)
-            data.elements [numUsed++] = createCopyIfNotNull (arrayToAddFrom.getUnchecked (startIndex++));
+            data.elements[numUsed++] = createCopyIfNotNull (arrayToAddFrom.getUnchecked (startIndex++));
     }
 
     /** Inserts a new object into the array assuming that the array is sorted.
@@ -533,7 +549,7 @@ public:
         ignoreUnused (comparator); // if you pass in an object with a static compareElements() method, this
                                    // avoids getting warning messages about the parameter being unused
         const ScopedLockType lock (getLock());
-        const int index = findInsertIndexInSortedArray (comparator, data.elements.getData(), newObject, 0, numUsed);
+        const int index = findInsertIndexInSortedArray (comparator, data.elements.get(), newObject, 0, numUsed);
         insert (index, newObject);
         return index;
     }
@@ -559,14 +575,15 @@ public:
 
         while (s < e)
         {
-            if (comparator.compareElements (objectToLookFor, data.elements [s]) == 0)
+            if (comparator.compareElements (objectToLookFor, data.elements[s]) == 0)
                 return s;
 
-            const int halfway = (s + e) / 2;
+            auto halfway = (s + e) / 2;
+
             if (halfway == s)
                 break;
 
-            if (comparator.compareElements (objectToLookFor, data.elements [halfway]) >= 0)
+            if (comparator.compareElements (objectToLookFor, data.elements[halfway]) >= 0)
                 s = halfway;
             else
                 e = halfway;
@@ -595,13 +612,13 @@ public:
 
             if (isPositiveAndBelow (indexToRemove, numUsed))
             {
-                ObjectClass** const e = data.elements + indexToRemove;
+                auto** e = data.elements + indexToRemove;
 
                 if (deleteObject)
-                    toDelete = *e;
+                    toDelete.reset (*e);
 
                 --numUsed;
-                const int numToShift = numUsed - indexToRemove;
+                auto numToShift = numUsed - indexToRemove;
 
                 if (numToShift > 0)
                     memmove (e, e + 1, sizeof (ObjectClass*) * (size_t) numToShift);
@@ -628,7 +645,7 @@ public:
 
         if (isPositiveAndBelow (indexToRemove, numUsed))
         {
-            ObjectClass** const e = data.elements + indexToRemove;
+            auto** e = data.elements + indexToRemove;
             removedItem = *e;
 
             --numUsed;
@@ -655,7 +672,7 @@ public:
     void removeObject (const ObjectClass* objectToRemove, bool deleteObject = true)
     {
         const ScopedLockType lock (getLock());
-        ObjectClass** const e = data.elements.getData();
+        auto** e = data.elements.get();
 
         for (int i = 0; i < numUsed; ++i)
         {
@@ -683,7 +700,7 @@ public:
     void removeRange (int startIndex, int numberToRemove, bool deleteObjects = true)
     {
         const ScopedLockType lock (getLock());
-        const int endIndex = jlimit (0, numUsed, startIndex + numberToRemove);
+        auto endIndex = jlimit (0, numUsed, startIndex + numberToRemove);
         startIndex = jlimit (0, numUsed, startIndex);
 
         if (endIndex > startIndex)
@@ -692,19 +709,19 @@ public:
             {
                 for (int i = startIndex; i < endIndex; ++i)
                 {
-                    ContainerDeletePolicy<ObjectClass>::destroy (data.elements [i]);
-                    data.elements [i] = nullptr; // (in case one of the destructors accesses this array and hits a dangling pointer)
+                    ContainerDeletePolicy<ObjectClass>::destroy (data.elements[i]);
+                    data.elements[i] = nullptr; // (in case one of the destructors accesses this array and hits a dangling pointer)
                 }
             }
 
-            const int rangeSize = endIndex - startIndex;
-            ObjectClass** e = data.elements + startIndex;
-            int numToShift = numUsed - endIndex;
+            auto rangeSize = endIndex - startIndex;
+            auto** e = data.elements + startIndex;
+            auto numToShift = numUsed - endIndex;
             numUsed -= rangeSize;
 
             while (--numToShift >= 0)
             {
-                *e = e [rangeSize];
+                *e = e[rangeSize];
                 ++e;
             }
 
@@ -743,8 +760,8 @@ public:
         if (isPositiveAndBelow (index1, numUsed)
              && isPositiveAndBelow (index2, numUsed))
         {
-            std::swap (data.elements [index1],
-                       data.elements [index2]);
+            std::swap (data.elements[index1],
+                       data.elements[index2]);
         }
     }
 
@@ -772,7 +789,7 @@ public:
                 if (! isPositiveAndBelow (newIndex, numUsed))
                     newIndex = numUsed - 1;
 
-                ObjectClass* const value = data.elements [currentIndex];
+                auto* value = data.elements[currentIndex];
 
                 if (newIndex > currentIndex)
                 {
@@ -787,7 +804,7 @@ public:
                              sizeof (ObjectClass*) * (size_t) (currentIndex - newIndex));
                 }
 
-                data.elements [newIndex] = value;
+                data.elements[newIndex] = value;
             }
         }
     }
@@ -865,7 +882,9 @@ public:
                                    // avoids getting warning messages about the parameter being unused
 
         const ScopedLockType lock (getLock());
-        sortArray (comparator, data.elements.getData(), 0, size() - 1, retainOrderOfEquivalentItems);
+
+        if (size() > 1)
+            sortArray (comparator, data.elements.get(), 0, size() - 1, retainOrderOfEquivalentItems);
     }
 
     //==============================================================================
@@ -889,16 +908,15 @@ public:
 private:
     //==============================================================================
     ArrayAllocationBase <ObjectClass*, TypeOfCriticalSectionToUse> data;
-    int numUsed;
+    int numUsed = 0;
 
     void deleteAllObjects()
     {
         while (numUsed > 0)
-            ContainerDeletePolicy<ObjectClass>::destroy (data.elements [--numUsed]);
+            ContainerDeletePolicy<ObjectClass>::destroy (data.elements[--numUsed]);
     }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (OwnedArray)
 };
 
-
-#endif   // JUCE_OWNEDARRAY_H_INCLUDED
+} // namespace juce

@@ -48,8 +48,8 @@ class KlangFalterEditor  : public AudioProcessorEditor,
                            public ChangeNotifier::Listener,
                            public ChangeListener,
                            public Timer,
-                           public SliderListener,
-                           public ButtonListener
+	public Slider::Listener,
+	public Button::Listener
 {
 public:
     //==============================================================================

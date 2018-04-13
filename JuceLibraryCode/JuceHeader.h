@@ -10,8 +10,7 @@
 
 */
 
-#ifndef __APPHEADERFILE_IRCJCT__
-#define __APPHEADERFILE_IRCJCT__
+#pragma once
 
 #include "AppConfig.h"
 
@@ -44,5 +43,3 @@ namespace ProjectInfo
     const int          versionNumber  = 0x7e00901;
 }
 #endif
-
-#endif   // __APPHEADERFILE_IRCJCT__
